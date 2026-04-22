@@ -2,51 +2,54 @@
 
 Emacs Quail의 오토마타 구조를 기반으로 구현된 Neovim 전용 한글 입력 플러그인입니다.
 
-## Quickstart
+## 설치 및 설정
 
-### 1. 설치
-Neovim의 플러그인 디렉토리(예: `~/.config/nvim/lua/` 또는 플러그인 매니저 경로)에 복제합니다.
-
-```bash
-git clone https://github.com/murry2018/hangul.nvim.git
-```
-
-### 2. 설정 (`init.lua`)
-`init.lua`에 다음 내용을 추가합니다.
-
+### lazy.nvim
 ```lua
-require('hangul').setup()
+{ "murry2018/hangul.nvim" }
 ```
 
-### 3. 기본 조작
-- **`<C-g>`**: 한글 입력 모드 켜기/끄기 (Insert 모드 전용)
-- **`:HangulToggle`**: 한글 입력 모드 토글 명령
+### vim-plug
+```vim
+Plug 'murry2018/hangul.nvim'
+```
 
-## 기본 설정 및 커스터마이징
+## 사용법
+
+- **`<C-g>`**: 한글 입력 모드 토글 (Insert 모드)
+- **`:HangulToggle`**: 한글 입력 모드 토글 명령어
+
+## 커스터마이징
 
 ### 단축키 변경
-`setup()` 호출 시 기본 단축키가 `<C-g>`로 설정되지만, 원하는 키로 덮어씌울 수 있습니다.
+원하는 키로 직접 매핑하려면 다음과 같이 설정합니다.
 
 ```lua
--- 예: <C-\>로 단축키 변경
-vim.api.nvim_set_keymap('i', '<C-\\>', '<cmd>HangulToggle<CR>', { noremap = true, silent = true })
+-- 예: <C-\>로 변경
+vim.keymap.set('i', '<C-\\>', '<cmd>HangulToggle<CR>', { silent = true })
 ```
 
 ### 상태줄(Statusline) 표시
-`require('hangul').get_status()` 함수를 사용하여 현재 입력 모드("한" 또는 "")를 표시할 수 있습니다.
+`require('hangul').get_status()` 함수는 현재 입력 모드("한" 또는 "")를 반환합니다.
 
-**순수 Neovim Statusline 예시:**
+**Neovim Statusline 설정 예시:**
 
 ```lua
 _G.my_statusline = function()
     local status = require('hangul').get_status()
+    local mode = vim.api.nvim_get_mode().mode
+    local file_name = vim.fn.expand("%:t")
+    if file_name == "" then file_name = "[No Name]" end
+    local modified = vim.bo.modified and " [+]" or ""
+    
     local hangul_display = status ~= "" and (" [" .. status .. "] ") or ""
-    return "%f %m %=" .. hangul_display .. " %l,%c %p%%"
+    
+    return " " .. mode .. " | " .. file_name .. modified .. " %=" .. hangul_display .. " %l,%c %p%% "
 end
 vim.opt.statusline = "%!v:lua.my_statusline()"
 ```
 
-**lualine.nvim 예시:**
+**lualine.nvim 연동:**
 
 ```lua
 require('lualine').setup {
