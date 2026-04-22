@@ -1,15 +1,15 @@
 -- Copyright (C) 2026 J. Lee <2clean8@naver.com>
-
+--
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
 -- (at your option) any later version.
-
+--
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
-
+--
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -24,11 +24,16 @@ function M.get_status()
     if is_enabled then
         return "한"
     else
-        return "" -- Or "ENG" if preferred
+        return ""
     end
 end
 
 function M.toggle()
+    -- Ensure layout is loaded if setup() wasn't called manually
+    if not current_layout then
+        M.setup({})
+    end
+    
     is_enabled = not is_enabled
     if is_enabled then
         print("Hangul Input Enabled")
@@ -37,7 +42,6 @@ function M.toggle()
         print("Hangul Input Disabled")
     end
     
-    -- Trigger statusline refresh
     vim.api.nvim_exec_autocmds("User", { pattern = "HangulStatusUpdated" })
     vim.cmd('redrawstatus')
 end
@@ -100,10 +104,6 @@ function M.setup(opts)
             automata.reset()
         end
     })
-    
-    vim.api.nvim_create_user_command('HangulToggle', M.toggle, {})
-    -- Default keymap to toggle (can be overridden by user)
-    vim.api.nvim_set_keymap('i', '<C-g>', '<cmd>HangulToggle<CR>', { noremap = true, silent = true })
 end
 
 return M
