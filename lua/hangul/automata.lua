@@ -129,7 +129,7 @@ function M.process_key(key_index, layout)
                 state.jong = nil
             end
         elseif state.jung then
-            if compat_to_tail[key_index] then
+            if state.cho and compat_to_tail[key_index] then
                 state.jong = key_index
                 res = M.compose(state.cho, state.jung, state.jong)
                 backspace = true

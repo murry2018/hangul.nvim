@@ -6,6 +6,7 @@
 - (composing) '아' + 'ㅇ' -> (composing) '앙' (종성 매핑 오류 수정)
 - (composing) '파' + 'ㅎ' -> (composing) '팧' (종성 매핑 오류 수정)
 - (composing) '' + Shift+'ㅔ' -> (composing) 'ㅖ' (Shift 키 매핑 오류 수정)
+- (composing) 'ㅓ' + 'ㅇ' -> (composing) 'ㅓㅇ' (초성이 없는 모음 뒤에 자음 입력 시 조합 방지)
 
 ## 지우기 및 분해
 - (composing) '가' + BS -> (composing) 'ㄱ' (단계별 분해)
