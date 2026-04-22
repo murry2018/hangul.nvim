@@ -1,8 +1,32 @@
+-- Copyright (C) 2026 J. Lee <2clean8@naver.com>
+
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 local M = {}
 local automata = require('hangul.automata')
 local current_layout = nil
 local is_enabled = false
-local ignore_next_move = false -- Flag to distinguish plugin input from manual moves
+local ignore_next_move = false
+
+-- Get current status for statusline
+function M.get_status()
+    if is_enabled then
+        return "한"
+    else
+        return "" -- Or "ENG" if preferred
+    end
+end
 
 function M.toggle()
     is_enabled = not is_enabled
@@ -12,6 +36,10 @@ function M.toggle()
     else
         print("Hangul Input Disabled")
     end
+    
+    -- Trigger statusline refresh
+    vim.api.nvim_exec_autocmds("User", { pattern = "HangulStatusUpdated" })
+    vim.cmd('redrawstatus')
 end
 
 function M.setup(opts)
@@ -61,11 +89,10 @@ function M.setup(opts)
     -- Map Backspace
     vim.api.nvim_set_keymap('i', '<BS>', "v:lua.hangul_backspace()", { expr = true, noremap = true })
 
-    -- Auto-reset logic: If cursor moves by something other than our hangul_process, reset state.
+    -- Auto-reset logic
     vim.api.nvim_create_autocmd({"CursorMovedI", "InsertLeave"}, {
         callback = function()
             if not is_enabled then return end
-            
             if ignore_next_move then
                 ignore_next_move = false
                 return
@@ -75,6 +102,7 @@ function M.setup(opts)
     })
     
     vim.api.nvim_create_user_command('HangulToggle', M.toggle, {})
+    -- Default keymap to toggle (can be overridden by user)
     vim.api.nvim_set_keymap('i', '<C-g>', '<cmd>HangulToggle<CR>', { noremap = true, silent = true })
 end
 
