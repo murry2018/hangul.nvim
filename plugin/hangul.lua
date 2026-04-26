@@ -13,10 +13,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- Create the command as soon as the plugin is loaded (Zero-config)
+local hangul = require('hangul')
+
 vim.api.nvim_create_user_command('HangulToggle', function()
-    require('hangul').toggle()
+    hangul.toggle()
 end, {})
 
--- Default keymap for ease of use
-vim.api.nvim_set_keymap('i', '<C-g>', '<cmd>HangulToggle<CR>', { noremap = true, silent = true })
+vim.keymap.set('i', '<C-g>', '<cmd>HangulToggle<CR>', { noremap = true, silent = true })
+vim.keymap.set('c', '<C-g>', hangul.toggle,            { noremap = true, silent = true })

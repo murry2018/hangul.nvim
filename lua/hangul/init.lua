@@ -18,22 +18,18 @@ local automata = require('hangul.automata')
 local current_layout = nil
 local is_enabled = false
 local ignore_next_move = false
+local saved_is_enabled = false  -- CmdlineEnter 시 저장, CmdlineLeave 시 복원
+local skip_reset_count = 0      -- <BS>+char 조합 시 CmdlineChanged 2회 발화 대응
 
--- Get current status for statusline
 function M.get_status()
-    if is_enabled then
-        return "한"
-    else
-        return ""
-    end
+    return is_enabled and "한" or ""
 end
 
 function M.toggle()
-    -- Ensure layout is loaded if setup() wasn't called manually
     if not current_layout then
         M.setup({})
     end
-    
+
     is_enabled = not is_enabled
     if is_enabled then
         print("Hangul Input Enabled")
@@ -41,7 +37,7 @@ function M.toggle()
     else
         print("Hangul Input Disabled")
     end
-    
+
     vim.api.nvim_exec_autocmds("User", { pattern = "HangulStatusUpdated" })
     vim.cmd('redrawstatus')
 end
@@ -51,9 +47,10 @@ function M.setup(opts)
     local layout_name = opts.layout or "dubeolsik"
     current_layout = require('hangul.layouts.' .. layout_name)
 
+    -- Insert mode globals
     _G.hangul_process = function(key)
         if not is_enabled then return key end
-        
+
         local key_index = current_layout.keys[key]
         if not key_index then
             automata.reset()
@@ -72,7 +69,7 @@ function M.setup(opts)
         if not is_enabled then
             return vim.api.nvim_replace_termcodes("<BS>", true, true, true)
         end
-        
+
         ignore_next_move = true
         local res = automata.process_backspace(current_layout)
         if res and res ~= "" then
@@ -83,22 +80,104 @@ function M.setup(opts)
         end
     end
 
-    -- Map keys a-z, A-Z
+    -- Cmdline mode globals
+    _G.hangul_cmdline_process = function(key)
+        if not is_enabled then return key end
+
+        local key_index = current_layout.keys[key]
+        if not key_index then
+            automata.reset()
+            return key
+        end
+
+        local res, backspace = automata.process_key(key_index, current_layout)
+        skip_reset_count = backspace and 2 or 1
+        if backspace then
+            return vim.api.nvim_replace_termcodes("<BS>", true, true, true) .. res
+        end
+        return res
+    end
+
+    _G.hangul_cmdline_backspace = function()
+        if not is_enabled then
+            return vim.api.nvim_replace_termcodes("<BS>", true, true, true)
+        end
+
+        local res = automata.process_backspace(current_layout)
+        if res and res ~= "" then
+            skip_reset_count = 2
+            return vim.api.nvim_replace_termcodes("<BS>", true, true, true) .. res
+        else
+            automata.reset()
+            skip_reset_count = 0
+            return vim.api.nvim_replace_termcodes("<BS>", true, true, true)
+        end
+    end
+
+    _G.hangul_cmdline_cursor_reset = function(key)
+        automata.reset()
+        return vim.api.nvim_replace_termcodes(key, true, true, true)
+    end
+
+    -- Insert mode keymaps
     local letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     for i = 1, #letters do
         local char = letters:sub(i, i)
         vim.api.nvim_set_keymap('i', char, "v:lua.hangul_process('" .. char .. "')", { expr = true, noremap = true })
     end
-
-    -- Map Backspace
     vim.api.nvim_set_keymap('i', '<BS>', "v:lua.hangul_backspace()", { expr = true, noremap = true })
 
-    -- Auto-reset logic
+    -- Cmdline mode keymaps
+    for i = 1, #letters do
+        local char = letters:sub(i, i)
+        vim.api.nvim_set_keymap('c', char, "v:lua.hangul_cmdline_process('" .. char .. "')", { expr = true, noremap = true })
+    end
+    vim.api.nvim_set_keymap('c', '<BS>', "v:lua.hangul_cmdline_backspace()", { expr = true, noremap = true })
+
+    -- 커서 이동 시 오토마타 리셋 (CmdlineChanged는 커서 이동만으로 발화 안 함)
+    for _, key in ipairs({ "<Left>", "<Right>", "<Home>", "<End>",
+                           "<C-b>", "<C-e>", "<C-a>", "<Up>", "<Down>" }) do
+        vim.api.nvim_set_keymap('c', key,
+            "v:lua.hangul_cmdline_cursor_reset('" .. key .. "')",
+            { expr = true, noremap = true })
+    end
+
+    -- Insert mode auto-reset
     vim.api.nvim_create_autocmd({"CursorMovedI", "InsertLeave"}, {
         callback = function()
             if not is_enabled then return end
             if ignore_next_move then
                 ignore_next_move = false
+                return
+            end
+            automata.reset()
+        end
+    })
+
+    -- Cmdline: 진입 시 영어로 전환(현재 상태 저장), 종료 시 복원
+    vim.api.nvim_create_autocmd("CmdlineEnter", {
+        callback = function()
+            saved_is_enabled = is_enabled
+            is_enabled = false
+            skip_reset_count = 0
+            automata.reset()
+            vim.cmd('redrawstatus')
+        end
+    })
+
+    vim.api.nvim_create_autocmd("CmdlineLeave", {
+        callback = function()
+            is_enabled = saved_is_enabled
+            skip_reset_count = 0
+            automata.reset()
+            vim.cmd('redrawstatus')
+        end
+    })
+
+    vim.api.nvim_create_autocmd("CmdlineChanged", {
+        callback = function()
+            if skip_reset_count > 0 then
+                skip_reset_count = skip_reset_count - 1
                 return
             end
             automata.reset()
