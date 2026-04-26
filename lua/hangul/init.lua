@@ -32,10 +32,7 @@ function M.toggle()
 
     is_enabled = not is_enabled
     if is_enabled then
-        print("Hangul Input Enabled")
         automata.reset()
-    else
-        print("Hangul Input Disabled")
     end
 
     vim.api.nvim_exec_autocmds("User", { pattern = "HangulStatusUpdated" })
