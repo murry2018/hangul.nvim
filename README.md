@@ -16,8 +16,11 @@ Plug 'murry2018/hangul.nvim'
 
 ## 사용법
 
-- **`<C-g>`**: 한글 입력 모드 토글 (Insert 모드)
+- **`<C-g>`**: Insert 모드에서 한글 입력 모드 토글
+- **`<C-g>`**: Cmdline 모드에서 한글 입력 모드 토글 (Cmdline 모드 — `:`, `/`, `?`)
 - **`:HangulToggle`**: 한글 입력 모드 토글 명령어
+
+Cmdline 진입 시 한글 모드는 항상 영어로 초기화됩니다.
 
 ## 커스터마이징
 
@@ -25,8 +28,11 @@ Plug 'murry2018/hangul.nvim'
 원하는 키로 직접 매핑하려면 다음과 같이 설정합니다.
 
 ```lua
--- 예: <C-\>로 변경
+-- 예: Insert 모드에서 <C-\>로 한/영 변경
 vim.keymap.set('i', '<C-\\>', '<cmd>HangulToggle<CR>', { silent = true })
+
+-- 예: Cmdline 모드에서 <C-\>로 한/영 변경 (<cmd>는 Cmdline 모드에서 사용 불가)
+vim.keymap.set('c', '<C-\\>', function() require('hangul').toggle() end, { silent = true })
 ```
 
 ### 상태줄(Statusline) 표시
